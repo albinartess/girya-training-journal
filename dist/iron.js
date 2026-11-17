@@ -28,5 +28,4 @@ $('.brand').innerHTML=`${bellMark()}<b>ГИРЯ</b><small>ЖЕЛЕЗО + ЭНЕ�
 $('.brand').onclick=e=>{e.preventDefault();navigate('workout')};
 $('.aside-bottom b').textContent='Сила — в действии.';
 $('.aside-bottom p').textContent='Каждый подход считается.';
-render();
 
