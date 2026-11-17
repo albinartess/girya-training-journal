@@ -1,7 +1,7 @@
 // Bump the version whenever an application asset changes.
 const CACHE_PREFIX='girya-shell-';
-const CACHE_NAME=CACHE_PREFIX+'2026-11-17-pwa2';
-const ASSETS=['./','index.html','style.css','app.js','iron.css','iron.js','training.css','training.js','pwa.css','pwa.js','manifest.webmanifest','icon-192.png','icon-512.png','icon-maskable.png'];
+const CACHE_NAME=CACHE_PREFIX+'2026-11-17-backup1';
+const ASSETS=['./','index.html','style.css','app.js','iron.css','iron.js','training.css','training.js','pwa.css','pwa.js','manifest.webmanifest','icon-192.png','icon-512.png','icon-maskable.png','backup.css','backup.js','backup-ui.js'];
 const assetURLs=new Set(ASSETS.map(p=>new URL(p,self.registration.scope).href));
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ASSETS.map(p=>new Request(new URL(p,self.registration.scope),{cache:'reload'})))));
@@ -22,4 +22,5 @@ self.addEventListener('fetch',event=>{
   if(!assetURLs.has(canonical))return;
   event.respondWith(caches.open(CACHE_NAME).then(async cache=>(await cache.match(canonical))||fetch(request)));
 });
+
 
