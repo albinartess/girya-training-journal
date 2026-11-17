@@ -54,4 +54,10 @@ JSON:
 - `dist/style.css` — адаптивный дизайн.
 - `dist/app.js` — логика приложения.
 
-Развёрнутая версия: https://girya-training-journal.woodsyfinch1.chatgpt.site
+Развёрнутая версия: https://albinartess.github.io/girya-training-journal/
+
+
+## Дизайн «Железо + энергия»
+
+Графитовый интерфейс с оранжевым акцентом, отдельным экраном текущего подхода, таймером отдыха и итогом тренировки. Новые файлы: dist/iron.css и dist/iron.js. Данные совместимы с первой версией (ключ girya-v1).
+
