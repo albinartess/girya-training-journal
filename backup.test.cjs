@@ -1,0 +1,23 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const B=require('./dist/backup.js');
+const plan=()=>[{name:'Махи гирей',sets:3,weight:16,reps:15,bells:1}];
+const row=()=>({date:'2026-11-15',exercises:[{name:'Махи гирей',sets:[{weight:20,reps:10,bells:2,done:true,effort:7,plan:{weight:16,reps:15,bells:1}}]}],minutes:20,programKey:'A'});
+const current=()=>({programs:{A:plan(),B:plan(),C:plan()},program:plan(),activeProgram:'A',sessions:[],drafts:{},draftPrograms:{},measurements:[]});
+const legacy=()=>({program:plan(),sessions:[row()],drafts:{},measurements:[{date:'2026-11-15',weight:'80.5',waist:'90'}]});
+test('old export restores history, measurements and original plan',()=>{const m=B.preview(current(),legacy());const {data}=B.merge(m);assert.equal(data.sessions[0].exercises[0].sets[0].plan.weight,16);assert.equal(data.sessions[0].exercises[0].sets[0].weight,20);assert.equal(data.sessions[0].exercises[0].sets[0].effort,7);assert.equal(data.measurements[0].weight,80.5);assert.ok(data.programs.B)});
+test('repeat import is a no-op without duplicate sessions or measurements',()=>{const a=B.merge(B.preview(current(),legacy())).data;const b=B.merge(B.preview(a,legacy()));assert.equal(b.changed,0);assert.equal(b.data.sessions.length,1);assert.equal(b.data.measurements.length,1)});
+test('new export envelope is accepted',()=>{const e=B.envelope(legacy(),'installation-id');assert.equal(B.normalize(e).sessions.length,1)});
+test('unknown format/version is rejected',()=>{assert.throws(()=>B.normalize({format:'girya-local-backup',schema_version:2,data:legacy()}),/версия/)});
+test('program-only JSON is rejected',()=>{assert.throws(()=>B.normalize({program:plan()}),/полная/)});
+test('invalid date is rejected, not rolled into another month',()=>{const a=legacy();a.sessions[0].date='2026-02-31';assert.throws(()=>B.normalize(a),/дата/)});
+test('duplicate dates in one export fail safely',()=>{const a=legacy();a.sessions.push(row());assert.throws(()=>B.normalize(a),/несколько тренировок/)});
+test('bad numbers and invalid done/effort are rejected',()=>{for(const [field,value] of [['weight',-1],['reps',1.5],['bells',3],['done','yes'],['effort',11]]){const a=legacy();a.sessions[0].exercises[0].sets[0][field]=value;assert.throws(()=>B.normalize(a))}});
+test('missing old plan remains missing',()=>{const a=legacy();delete a.sessions[0].exercises[0].sets[0].plan;const b=B.normalize(a);assert.equal(b.sessions[0].exercises[0].sets[0].plan,undefined)});
+test('conflicts retain current data unless explicitly selected',()=>{const a=current();a.sessions=[row()];const b=legacy();b.sessions[0].exercises[0].sets[0].weight=24;const m=B.preview(a,b);assert.equal(m.summary.conflicts,1);assert.equal(B.merge(m).data.sessions[0].exercises[0].sets[0].weight,20);assert.equal(B.merge(m,{'day:2026-11-15':'import'}).data.sessions[0].exercises[0].sets[0].weight,24)});
+test('restoring one conflicting day preserves all unrelated records',()=>{const a=current();a.sessions=[row(),{...row(),date:'2026-11-16'}];a.drafts['2026-11-15']=row().exercises;a.draftPrograms['2026-11-15']='B';const b=legacy();const out=B.merge(B.preview(a,b),{'day:2026-11-15':'import'}).data;assert.equal(out.sessions.length,2);assert.equal(out.drafts['2026-11-15'],undefined);assert.equal(a.draftPrograms['2026-11-15'],'B')});
+test('program conflict selection affects only selected slot',()=>{const a=current(),b=current();b.programs.B[0].weight=24;const m=B.preview(a,b);const out=B.merge(m,{'program:B':'import'}).data;assert.equal(out.programs.A[0].weight,16);assert.equal(out.programs.B[0].weight,24);assert.equal(out.programs.C[0].weight,16)});
+test('prototype keys and unknown fields never enter restored object',()=>{const a=JSON.parse(JSON.stringify(legacy()).replace('"program":','"__proto__":{"polluted":true},"program":'));a.token='secret';const out=B.merge(B.preview(current(),a)).data;assert.equal(out.token,undefined);assert.equal({}.polluted,undefined);assert.equal(Object.hasOwn(out,'__proto__'),false)});
+test('merge does not mutate inputs',()=>{const a=current(),b=legacy(),before=JSON.stringify([a,b]);B.merge(B.preview(a,b));assert.equal(JSON.stringify([a,b]),before)});
+
+test('integrity detects changed payload',async()=>{const e=B.envelope(legacy(),'id');e.integrity={algorithm:'SHA-256',digest:await B.checksum(e.data)};await B.verifyIntegrity(e);e.data.sessions[0].exercises[0].sets[0].weight=24;await assert.rejects(B.verifyIntegrity(e),/Контрольная сумма/)});
