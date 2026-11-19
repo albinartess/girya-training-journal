@@ -13,10 +13,10 @@
   addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;installButton.hidden=false});
   addEventListener('appinstalled',()=>{installPrompt=null;installButton.hidden=true;toast('ГИРЯ установлена')});
   addEventListener('online',updateState);addEventListener('offline',updateState);
-  updateButton.onclick=()=>{if(!registration?.waiting)return;save();updateButton.disabled=true;updateButton.textContent='Обновляется…';registration.waiting.postMessage({type:'APPLY_UPDATE'})};
+  updateButton.onclick=async()=>{if(!registration?.waiting)return;if(!await save()||!await GiryaStore.flush())return;applyingUpdate=true;updateButton.disabled=true;updateButton.textContent='Обновляется…';registration.waiting.postMessage({type:'APPLY_UPDATE'})};
   if(!('serviceWorker' in navigator)){state.textContent='Этот браузер не поддерживает офлайн-режим';installButton.onclick=showInstallHelp;return}
   let applyingUpdate=false;
-  updateButton.addEventListener('click',()=>{applyingUpdate=true});
+  
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(applyingUpdate&&!reloading){reloading=true;location.reload()}else{offlineReady=true;updateState()}});
   async function start(){try{
     registration=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});
@@ -26,3 +26,4 @@
   }catch(error){state.textContent='Офлайн-режим недоступен. Проверь сеть и открой приложение снова.';state.title=error.message}}
   if(document.readyState==='complete')start();else addEventListener('load',start,{once:true});
 })();
+

@@ -19,7 +19,7 @@ function withEditingSlot(fn){const prior=db.activeProgram;db.activeProgram=editi
 function captureEditor(){const form=$('#program-form');if(!form)return true;if(!form.reportValidity())return false;withEditingSlot(()=>captureProgram());return true}
 const originalImport=importProgram;
 importProgram=async function(event){const prior=db.activeProgram;db.activeProgram=editingSlot;try{await originalImport(event)}finally{db.activeProgram=prior;save()}};
-finishIron=function(){if(!completed(draft()))return baseFinish();baseFinish();const session=db.sessions.find(s=>s.date===selected);if(session){session.programKey=draftSlot();save()}};
+finishIron=async function(){if(!completed(draft()))return baseFinish();await baseFinish();const session=db.sessions.find(s=>s.date===selected);if(session){session.programKey=draftSlot();await save()}};
 
 function valuesForExercise(session,name){return session.exercises.filter(e=>e.name===name).flatMap(e=>e.sets.filter(s=>s.done).map(s=>({...s,bells:s.bells||1})))}
 function metricValue(sets,key){if(key==='weight')return Math.max(0,...sets.map(s=>s.weight));if(key==='reps')return sets.reduce((a,s)=>a+s.reps,0);if(key==='sets')return sets.length;return sets.reduce((a,s)=>a+s.weight*s.reps*s.bells,0)}
@@ -43,7 +43,7 @@ bind=function(){
   if(page==='program'){
     const form=$('#program-form');form.onsubmit=e=>{e.preventDefault();if(captureEditor())toast('Тренировка '+slotLabels[editingSlot]+' сохранена')};
     document.querySelectorAll('[data-edit-slot]').forEach(b=>b.onclick=()=>{if(!captureEditor())return;editingSlot=b.dataset.editSlot;render()});
-    $('#program-add').onclick=()=>{if(!captureEditor())return;db.programs[editingSlot].push({name:'Новое упражнение',sets:3,weight:16,reps:10,bells:1});save();render()};
+    $('#program-add').onclick=()=>{if(!captureEditor())return;db.programs[editingSlot].push({name:'Новое упражнение',exerciseId:crypto.randomUUID(),sets:3,weight:16,reps:10,bells:1});save();render()};
     document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{if(!captureEditor())return;const p=db.programs[editingSlot];if(p.length===1)return toast('Оставь хотя бы одно упражнение');p.splice(+b.dataset.remove,1);save();render()});
     $('#use-program').onclick=()=>{if(!captureEditor())return;chooseWorkout(editingSlot);navigate('workout')};
     form.querySelectorAll('input').forEach(input=>input.addEventListener('change',()=>{if(form.checkValidity())captureEditor()}));
@@ -51,5 +51,6 @@ bind=function(){
   if(page==='progress')document.querySelectorAll('[data-metric]').forEach(b=>b.onclick=()=>{metric=b.dataset.metric;render()});
 };
 render();
+
 
 
