@@ -3,3 +3,11 @@ node_modules/
 Thumbs.db
 *.log
 *.tar.gz
+.env
+.env.*
+!.env.example
+data/
+*.sqlite*
+*.db
+*.db-*
+*.jpg
