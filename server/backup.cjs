@@ -1,0 +1,10 @@
+'use strict';
+const {backup}=require('node:sqlite');
+const {config}=require('./config.cjs');
+const {openDatabase}=require('./database.cjs');
+const path=require('node:path');
+const cfg=config(),db=openDatabase(cfg.databasePath);
+const target=process.argv[2];
+if(!target||!path.isAbsolute(target))throw Error('Provide absolute output path outside public dist');
+if(path.resolve(target).startsWith(path.resolve(__dirname,'../dist')+path.sep)||path.resolve(target)===cfg.databasePath)throw Error('Unsafe backup target');
+backup(db,target).then(()=>console.log('Database backup completed')).catch(()=>{console.error('Database backup failed');process.exitCode=1}).finally(()=>db.close());
